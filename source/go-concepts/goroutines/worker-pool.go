@@ -1,8 +1,9 @@
-package goroutines
+package main
 
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -43,6 +44,7 @@ remainingWorkerPoint:
 		w.remainingWorkers -= 1
 		go func() {
 			handleEvent(ctx, evt)
+			// not thread safe
 			w.remainingWorkers += 1
 			w.workerDoneChannel <- 1
 		}()
@@ -58,7 +60,24 @@ remainingWorkerPoint:
 func handleEvent(ctx context.Context, evt *Event) {
 
 	fmt.Println(evt.msg, time.Now())
-	time.Sleep(1)
+
+	va := time.Duration(rand.Intn(60))
+	time.Sleep(va * time.Second)
 }
 
+func main() {
 
+	f, err := NewWorkerPool(context.Background(), 5, 10*time.Second)
+
+	if err != nil {
+		fmt.Println("error in creating pool")
+		return
+	}
+
+	for i := 1; i <= 100; i++ {
+		fmt.Println("calling ", i)
+		f.ConsumeEvent(context.Background(), &Event{
+			msg: fmt.Sprintf("msg {%s}", i),
+		})
+	}
+}
